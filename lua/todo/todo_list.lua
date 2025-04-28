@@ -29,7 +29,11 @@ end
 --- @param file string Path to the todo file
 local function init_todo_file(file)
   if vim.fn.filereadable(file) == 0 then
-    write_file(file, vim.fn.json_encode({ todos = {} }))
+    local content = vim.fn.json_encode({ todos = {} })
+    if type(content) ~= "string" then
+      error("Failed to encode initial JSON for: " .. file)
+    end
+    write_file(file, content)
   end
 end
 
@@ -39,13 +43,15 @@ function M.load_todos()
   init_todo_file(Config.config.todo_file)
   local content = vim.fn.readfile(Config.config.todo_file)
   if not content or #content == 0 then
-    write_file(Config.config.todo_file, vim.fn.json_encode({ todos = {} }))
+    local empty_content = vim.fn.json_encode({ todos = {} })
+    write_file(Config.config.todo_file, empty_content)
     return {}
   end
 
   local ok, data = pcall(vim.fn.json_decode, table.concat(content))
   if not ok or type(data) ~= "table" or type(data.todos) ~= "table" then
-    write_file(Config.config.todo_file, vim.fn.json_encode({ todos = {} }))
+    local empty_content = vim.fn.json_encode({ todos = {} })
+    write_file(Config.config.todo_file, empty_content)
     return {}
   end
 
@@ -97,7 +103,7 @@ function M.save_todos(todos)
   local data = { todos = valid_todos }
   local ok, encoded = pcall(vim.fn.json_encode, data)
   if not ok then
-    vim.notify("Failed to encode todos: " .. encoded, vim.log.levels.ERROR)
+    vim.notify("Failed to encode todos: " .. tostring(encoded), vim.log.levels.ERROR)
     return
   end
   write_file(Config.config.todo_file, encoded)
