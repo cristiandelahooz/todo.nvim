@@ -1,0 +1,171 @@
+--- @module "todo.todo_list"
+--- @brief Manages todo list CRUD operations and storage.
+
+local M = {}
+
+local Config = require("todo.config")
+
+--- @class Todo
+--- @field text string Todo description
+--- @field done boolean Completion status
+--- @field created_at number Timestamp (milliseconds since epoch) when created
+
+--- @type string Path to the todo JSON file
+M.todo_file = nil
+
+--- Helper: Write a string to a file
+--- @param file_path string Path to the file
+--- @param content string Content to write
+local function write_file(file_path, content)
+  local file = io.open(file_path, "w")
+  if not file then
+    error("Failed to open file for writing: " .. file_path)
+  end
+  file:write(content)
+  file:close()
+end
+
+--- Initialize an empty todo file if it doesn't exist
+--- @param file string Path to the todo file
+local function init_todo_file(file)
+  if vim.fn.filereadable(file) == 0 then
+    write_file(file, vim.fn.json_encode({ todos = {} }))
+  end
+end
+
+--- Load todos from file, applying auto-deletion
+--- @return Todo[] List of todos
+function M.load_todos()
+  init_todo_file(Config.config.todo_file)
+  local content = vim.fn.readfile(Config.config.todo_file)
+  if not content or #content == 0 then
+    write_file(Config.config.todo_file, vim.fn.json_encode({ todos = {} }))
+    return {}
+  end
+
+  local ok, data = pcall(vim.fn.json_decode, table.concat(content))
+  if not ok or type(data) ~= "table" or type(data.todos) ~= "table" then
+    write_file(Config.config.todo_file, vim.fn.json_encode({ todos = {} }))
+    return {}
+  end
+
+  -- Filter valid todos and apply auto-deletion
+  local todos = {}
+  local now = os.time() * 1000 -- Current time in milliseconds
+  for i, todo in ipairs(data.todos) do
+    if
+      type(todo) == "table"
+      and type(todo.text) == "string"
+      and type(todo.done) == "boolean"
+      and type(todo.created_at) == "number"
+    then
+      -- Skip if auto-deletion is enabled and todo is expired
+      if not Config.config.auto_delete_ms or (now - todo.created_at) <= Config.config.auto_delete_ms then
+        todos[#todos + 1] = {
+          text = todo.text,
+          done = todo.done,
+          created_at = todo.created_at,
+        }
+      end
+    end
+  end
+
+  -- Save filtered todos
+  M.save_todos(todos)
+  return todos
+end
+
+--- Save todos to file
+--- @param todos Todo[] List of todos to save
+function M.save_todos(todos)
+  local valid_todos = {}
+  for i, todo in ipairs(todos or {}) do
+    if
+      type(todo) == "table"
+      and type(todo.text) == "string"
+      and type(todo.done) == "boolean"
+      and type(todo.created_at) == "number"
+    then
+      valid_todos[i] = {
+        text = todo.text,
+        done = todo.done,
+        created_at = todo.created_at,
+      }
+    end
+  end
+
+  local data = { todos = valid_todos }
+  local ok, encoded = pcall(vim.fn.json_encode, data)
+  if not ok then
+    vim.notify("Failed to encode todos: " .. encoded, vim.log.levels.ERROR)
+    return
+  end
+  write_file(Config.config.todo_file, encoded)
+end
+
+--- Add a new todo
+--- @param text string Todo description
+--- @return boolean Success status
+function M.add_todo(text)
+  if type(text) ~= "string" or text == "" then
+    vim.notify("Invalid todo text: Must be a non-empty string", vim.log.levels.ERROR)
+    return false
+  end
+  local todos = M.load_todos()
+  table.insert(todos, {
+    text = vim.trim(text),
+    done = false,
+    created_at = os.time() * 1000,
+  })
+  M.save_todos(todos)
+  return true
+end
+
+--- Toggle todo completion
+--- @param index number Todo index (1-based)
+function M.toggle_todo(index)
+  if type(index) ~= "number" or index < 1 then
+    return
+  end
+  local todos = M.load_todos()
+  if todos[index] then
+    todos[index].done = not todos[index].done
+    M.save_todos(todos)
+  end
+end
+
+--- Delete a todo
+--- @param index number Todo index (1-based)
+function M.delete_todo(index)
+  if type(index) ~= "number" or index < 1 then
+    return
+  end
+  local todos = M.load_todos()
+  if todos[index] then
+    table.remove(todos, index)
+    M.save_todos(todos)
+  end
+end
+
+--- Edit a todo
+--- @param index number Todo index (1-based)
+--- @param new_text string New todo description
+--- @return boolean Success status
+function M.edit_todo(index, new_text)
+  if type(index) ~= "number" or index < 1 then
+    return false
+  end
+  if type(new_text) ~= "string" or new_text == "" then
+    vim.notify("Invalid todo text: Must be a non-empty string", vim.log.levels.ERROR)
+    return false
+  end
+  local todos = M.load_todos()
+  if todos[index] then
+    todos[index].text = vim.trim(new_text)
+    M.save_todos(todos)
+    return true
+  end
+  return false
+end
+
+return M
