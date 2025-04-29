@@ -3,7 +3,7 @@
 
 local M = {}
 
-local Config = require("todo.config")
+local config = require("todo.config")
 
 --- @class Todo
 --- @field text string Todo description
@@ -17,7 +17,7 @@ M.todo_file = nil
 --- @param file_path string Path to the file
 --- @param content string Content to write
 local function write_file(file_path, content)
-  if Config.config.debug then
+  if config.config.debug then
     vim.notify("Writing to: " .. file_path, vim.log.levels.INFO)
   end
   local file = io.open(file_path, "w")
@@ -31,7 +31,7 @@ end
 --- Initialize an empty todo file if it doesn't exist
 --- @param file string Path to the todo file
 local function init_todo_file(file)
-  if Config.config.debug then
+  if config.config.debug then
     vim.notify("init_todo_file called with file: " .. tostring(file), vim.log.levels.INFO)
   end
 
@@ -41,7 +41,7 @@ local function init_todo_file(file)
 
   -- Ensure the directory exists
   local dir = vim.fn.fnamemodify(file, ":h")
-  if Config.config.debug then
+  if config.config.debug then
     vim.notify("Ensuring directory exists: " .. dir, vim.log.levels.INFO)
   end
   vim.fn.mkdir(dir, "p")
@@ -57,7 +57,7 @@ local function init_todo_file(file)
       error("Failed to write to file: " .. file .. ". Error: " .. tostring(err))
     end
 
-    if Config.config.debug then
+    if config.config.debug then
       vim.notify("Created new todo file: " .. file, vim.log.levels.INFO)
     end
   end
@@ -66,21 +66,21 @@ end
 --- Load todos from file, applying auto-deletion
 --- @return Todo[] List of todos
 function M.load_todos()
-  if Config.config.debug then
-    vim.notify("Loading todos from: " .. Config.config.todo_file, vim.log.levels.INFO)
+  if config.config.debug then
+    vim.notify("Loading todos from: " .. config.config.todo_file, vim.log.levels.INFO)
   end
-  init_todo_file(Config.config.todo_file)
-  local content = vim.fn.readfile(Config.config.todo_file)
+  init_todo_file(config.config.todo_file)
+  local content = vim.fn.readfile(config.config.todo_file)
   if not content or #content == 0 then
     local empty_content = vim.fn.json_encode({ todos = {} })
-    write_file(Config.config.todo_file, empty_content)
+    write_file(config.config.todo_file, empty_content)
     return {}
   end
 
   local ok, data = pcall(vim.fn.json_decode, table.concat(content))
   if not ok or type(data) ~= "table" or type(data.todos) ~= "table" then
     local empty_content = vim.fn.json_encode({ todos = {} })
-    write_file(Config.config.todo_file, empty_content)
+    write_file(config.config.todo_file, empty_content)
     return {}
   end
 
@@ -95,7 +95,7 @@ function M.load_todos()
       and type(todo.created_at) == "number"
     then
       -- Skip if auto-deletion is enabled and todo is expired
-      if not Config.config.auto_delete_ms or (now - todo.created_at) <= Config.config.auto_delete_ms then
+      if not config.config.auto_delete_ms or (now - todo.created_at) <= config.config.auto_delete_ms then
         todos[#todos + 1] = {
           text = todo.text,
           done = todo.done,
@@ -113,7 +113,7 @@ end
 --- Save todos to file
 --- @param todos Todo[] List of todos to save
 function M.save_todos(todos)
-  if Config.config.debug then
+  if config.config.debug then
     vim.notify("Saving todos: " .. vim.inspect(todos), vim.log.levels.INFO)
   end
   local valid_todos = {}
@@ -138,7 +138,7 @@ function M.save_todos(todos)
     vim.notify("Failed to encode todos: " .. tostring(encoded), vim.log.levels.ERROR)
     return
   end
-  write_file(Config.config.todo_file, encoded)
+  write_file(config.config.todo_file, encoded)
 end
 
 --- Add a new todo
