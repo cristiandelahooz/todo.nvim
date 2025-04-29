@@ -17,7 +17,7 @@ function M.open()
   local width = math.floor(vim.o.columns * 0.6)
   local height = math.min(#todos + 2, math.floor(vim.o.lines * 0.6))
   local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
+  local col = vim.o.columns - width
 
   -- Create buffer
   local buf = vim.api.nvim_create_buf(false, true)
