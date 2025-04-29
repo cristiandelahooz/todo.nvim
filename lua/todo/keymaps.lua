@@ -82,6 +82,8 @@ function M.set_window_keymaps(buf, win)
       "q: Close window",
       "?: Show this help",
     }
+    vim.api.nvim_win_set_height(win, #help + 2)
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, help)
     vim.api.nvim_buf_set_option(buf, "modifiable", false)
   end, opts)
