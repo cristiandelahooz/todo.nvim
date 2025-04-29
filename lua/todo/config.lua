@@ -55,6 +55,9 @@ function M.setup(opts)
     config.debug = false
   end
 
+  -- Save the config to the module for later access
+  M.config = config
+
   return config
 end
 
