@@ -17,6 +17,9 @@ M.todo_file = nil
 --- @param file_path string Path to the file
 --- @param content string Content to write
 local function write_file(file_path, content)
+  if Config.config.debug then
+    vim.notify("Writing to: " .. file_path, vim.log.levels.INFO)
+  end
   local file = io.open(file_path, "w")
   if not file then
     error("Failed to open file for writing: " .. file_path)
@@ -28,9 +31,20 @@ end
 --- Initialize an empty todo file if it doesn't exist
 --- @param file string Path to the todo file
 local function init_todo_file(file)
+  if Config.config.debug then
+    vim.notify("init_todo_file called with file: " .. tostring(file), vim.log.levels.INFO)
+  end
+
   if type(file) ~= "string" or file == "" then
     error("Invalid file path provided")
   end
+
+  -- Ensure the directory exists
+  local dir = vim.fn.fnamemodify(file, ":h")
+  if Config.config.debug then
+    vim.notify("Ensuring directory exists: " .. dir, vim.log.levels.INFO)
+  end
+  vim.fn.mkdir(dir, "p")
 
   if vim.fn.filereadable(file) == 0 then
     local success, content = pcall(vim.fn.json_encode, { todos = {} })
@@ -40,7 +54,11 @@ local function init_todo_file(file)
 
     local ok, err = pcall(write_file, file, content)
     if not ok then
-      error("Failed to write to file: " .. file .. ". Error: " .. err)
+      error("Failed to write to file: " .. file .. ". Error: " .. tostring(err))
+    end
+
+    if Config.config.debug then
+      vim.notify("Created new todo file: " .. file, vim.log.levels.INFO)
     end
   end
 end
@@ -48,6 +66,9 @@ end
 --- Load todos from file, applying auto-deletion
 --- @return Todo[] List of todos
 function M.load_todos()
+  if Config.config.debug then
+    vim.notify("Loading todos from: " .. Config.config.todo_file, vim.log.levels.INFO)
+  end
   init_todo_file(Config.config.todo_file)
   local content = vim.fn.readfile(Config.config.todo_file)
   if not content or #content == 0 then
@@ -92,6 +113,9 @@ end
 --- Save todos to file
 --- @param todos Todo[] List of todos to save
 function M.save_todos(todos)
+  if Config.config.debug then
+    vim.notify("Saving todos: " .. vim.inspect(todos), vim.log.levels.INFO)
+  end
   local valid_todos = {}
   for i, todo in ipairs(todos or {}) do
     if

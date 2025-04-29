@@ -8,6 +8,7 @@ local M = {}
 --- @field todo_file string Path to the JSON file for todos (default: state_dir/todo/todos.json)
 --- @field auto_delete_ms number? Time in milliseconds after which todos are auto-deleted (nil to disable)
 --- @field colors table Color palette for UI (default: Solarized Osaka with TailwindCSS orange)
+--- @field debug boolean Enable debug logging (default: false)
 
 --- Default configuration
 --- @type TodoConfig
@@ -22,6 +23,7 @@ local defaults = {
     base0 = "#839496", -- Solarized Osaka base0
     base03 = "#002b36", -- Solarized Osaka base03
   },
+  debug = false,
 }
 
 --- Set up and validate configuration
@@ -46,6 +48,11 @@ function M.setup(opts)
   if config.auto_delete_ms and (type(config.auto_delete_ms) ~= "number" or config.auto_delete_ms < 0) then
     vim.notify("Invalid auto_delete_ms: Must be a non-negative number", vim.log.levels.WARN)
     config.auto_delete_ms = nil
+  end
+
+  -- Validate debug
+  if type(config.debug) ~= "boolean" then
+    config.debug = false
   end
 
   return config
