@@ -15,7 +15,7 @@ local TodoList = require("todo.todo_list")
 function M.open()
   local todos = TodoList.load_todos()
   local width = math.floor(vim.o.columns * 0.6)
-  local height = math.min(#todos + 2, math.floor(vim.o.lines * 0.6))
+  local height = math.min(#todos + 10, math.floor(vim.o.lines * 0.6))
   local row = math.floor((vim.o.lines - height) / 2)
   local col = vim.o.columns - width
 
@@ -26,8 +26,8 @@ function M.open()
   -- Set buffer content
   local lines = { " Todo List (Press ? for help) " }
   for i, todo in ipairs(todos) do
-    local icon = todo.done and "✓" or " "
-    table.insert(lines, string.format(" %s %d. %s", icon, i, todo.text))
+    local icon = todo.done and "✓" or "[ ]"
+    table.insert(lines, string.format(" %s %s", icon, todo.text))
   end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
