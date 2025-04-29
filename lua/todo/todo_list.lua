@@ -28,12 +28,20 @@ end
 --- Initialize an empty todo file if it doesn't exist
 --- @param file string Path to the todo file
 local function init_todo_file(file)
+  if type(file) ~= "string" or file == "" then
+    error("Invalid file path provided")
+  end
+
   if vim.fn.filereadable(file) == 0 then
-    local content = vim.fn.json_encode({ todos = {} })
-    if type(content) ~= "string" then
+    local success, content = pcall(vim.fn.json_encode, { todos = {} })
+    if not success or type(content) ~= "string" then
       error("Failed to encode initial JSON for: " .. file)
     end
-    write_file(file, content)
+
+    local ok, err = pcall(write_file, file, content)
+    if not ok then
+      error("Failed to write to file: " .. file .. ". Error: " .. err)
+    end
   end
 end
 
