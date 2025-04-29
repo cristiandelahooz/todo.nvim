@@ -4,7 +4,6 @@
 local M = {}
 
 local Config = require("todo.config")
-local Keymaps = require("todo.keymaps")
 local TodoList = require("todo.todo_list")
 
 --- @class Window
@@ -51,7 +50,7 @@ function M.open()
   M.apply_highlights(buf, todos)
 
   -- Set keymaps
-  Keymaps.set_window_keymaps(buf, win)
+  require("todo.keymaps").set_window_keymaps(buf, win)
 
   return { buf = buf, win = win }
 end
