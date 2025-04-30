@@ -95,7 +95,14 @@ function M.load_todos()
       and type(todo.created_at) == "number"
     then
       -- Skip if auto-deletion is enabled and todo is expired
-      if not config.config.auto_delete_ms or (now - todo.created_at) <= config.config.auto_delete_ms then
+      if config.config.debug then
+        vim.notify("Checking todo: " .. vim.inspect(todo), vim.log.levels.INFO)
+      end
+      if
+        not todo.done
+        or not config.config.auto_delete_ms
+        or (now - todo.created_at) <= config.config.auto_delete_ms
+      then
         todos[#todos + 1] = {
           text = todo.text,
           done = todo.done,
