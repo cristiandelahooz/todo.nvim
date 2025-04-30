@@ -6,10 +6,6 @@ local M = {}
 local Config = require("todo.config")
 local UI = require("todo.ui")
 
---- Plugin configuration
---- @type TodoConfig
-M.config = {}
-
 --- Set up the plugin with user-provided options
 --- @param opts? TodoConfig User configuration options
 function M.setup(opts)
