@@ -4,18 +4,18 @@
 local M = {}
 
 --- @class TodoConfig
---- @field state_dir string Directory for storing todos (default: stdpath("state"))
---- @field todo_file string Path to the JSON file for todos (default: state_dir/todo/todos.json)
---- @field auto_delete_ms number? Time in milliseconds after which todos are auto-deleted (nil to disable)
---- @field colors table Color palette for UI (default: Solarized Osaka with TailwindCSS orange)
---- @field debug boolean Enable debug logging (default: false)
+--- @field state_dir? string Directory for storing todos (default: stdpath("state"))
+--- @field todo_file? string Path to the JSON file for todos (default: state_dir/todo/todos.json)
+--- @field auto_delete_ms? number Time in milliseconds after which todos are auto-deleted (nil to disable)
+--- @field colors? table Color palette for UI (default: Solarized Osaka with TailwindCSS orange)
+--- @field debug? boolean Enable debug logging (default: false)
 
 --- Default configuration
 --- @type TodoConfig
 local defaults = {
   state_dir = vim.fn.stdpath("state"),
-  todo_file = nil, -- Computed dynamically if not set
-  auto_delete_ms = nil,
+  todo_file = "/todo/todos.json", -- Computed dynamically if not set
+  auto_delete_ms = 5 * 60 * 1000, -- 5 minutes (nil to disable)
   colors = {
     orange = "#f97316", -- TailwindCSS orange-500 (OKLCH: 0.77, 0.19, 32.67)
     yellow = "#b58900", -- Solarized Osaka yellow
@@ -35,10 +35,7 @@ function M.setup(opts)
   -- Ensure state_dir exists
   vim.fn.mkdir(config.state_dir, "p")
 
-  -- Set default todo_file if not provided
-  if not config.todo_file then
-    config.todo_file = config.state_dir .. "/todo/todos.json"
-  end
+  config.todo_file = config.state_dir .. config.todo_file
 
   -- Ensure todo_file directory exists
   local todo_dir = vim.fn.fnamemodify(config.todo_file, ":h")
