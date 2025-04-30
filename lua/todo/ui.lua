@@ -9,6 +9,7 @@ local TodoList = require("todo.todo_list")
 --- @class Window
 --- @field buf number Buffer handle
 --- @field win number Window handle
+--- @field timer userdata? Timer for real-time updates
 
 --- Format milliseconds to a human-readable time (e.g., "5m 30s")
 --- @param ms number Milliseconds
@@ -26,6 +27,32 @@ local function format_time_remaining(ms)
   return string.format("%ds", seconds)
 end
 
+--- Update buffer content with current todos and times
+--- @param buf number Buffer handle
+--- @param todos Todo[] List of todos
+--- @return table<number, number?> time_starts Start column of time text for each todo
+local function update_buffer(buf, todos)
+  local lines = { " Todo List (Press ? for help) " }
+  local time_starts = {}
+  local now = os.time() * 1000
+  for i, todo in ipairs(todos) do
+    local icon = todo.done and "✓" or "[ ]"
+    local time_remaining = Config.config.auto_delete_ms
+        and todo.done
+        and (Config.config.auto_delete_ms - (now - todo.created_at))
+      or nil
+    local time_text = time_remaining and format_time_remaining(time_remaining) .. " remaining" or ""
+    local main_text = string.format("%s %s", icon, todo.text)
+    local line = time_text ~= "" and (main_text .. " " .. time_text) or main_text
+    table.insert(lines, line)
+    time_starts[i] = time_text ~= "" and #main_text + 2 or nil -- +2 for space and 1-based indexing
+  end
+  vim.api.nvim_buf_set_option(buf, "modifiable", true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  return time_starts
+end
+
 --- Open the todo list UI
 --- @return Window Window handles
 function M.open()
@@ -40,25 +67,10 @@ function M.open()
   vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 
   -- Set buffer content with remaining time
-  local lines = { " Todo List (Press ? for help) " }
-  local time_starts = {} -- Store start column of time text for each line
-  local now = os.time() * 1000
-  for i, todo in ipairs(todos) do
-    local icon = todo.done and "✓" or "[ ]"
-    local time_remaining = Config.config.auto_delete_ms
-        and todo.done
-        and (Config.config.auto_delete_ms - (now - todo.created_at))
-      or nil
-    local time_text = time_remaining and format_time_remaining(time_remaining) .. " remaining" or ""
-    local main_text = string.format("%s %s", icon, todo.text)
-    local line = time_text ~= "" and (main_text .. " " .. time_text) or main_text
-    table.insert(lines, line)
-    time_starts[i] = time_text ~= "" and #main_text + 2 or nil -- +2 for space and 1-based indexing
-  end
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  local time_starts = update_buffer(buf, todos)
 
   -- Create floating window
-  local win = vim.api.nvim_open_win(buf, true, {
+  local win_config = {
     relative = "editor",
     width = width,
     height = height,
@@ -66,7 +78,8 @@ function M.open()
     col = col,
     style = "minimal",
     border = "rounded",
-  })
+  }
+  local win = vim.api.nvim_open_win(buf, true, win_config)
 
   -- Set window options
   vim.api.nvim_win_set_option(win, "cursorline", true)
@@ -78,7 +91,46 @@ function M.open()
   -- Set keymaps
   M.set_window_keymaps(buf, win)
 
-  return { buf = buf, win = win }
+  -- Set up timer for real-time updates
+  local timer = vim.loop.new_timer()
+  timer:start(
+    1000,
+    1000,
+    vim.schedule_wrap(function()
+      if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_win_is_valid(win) then
+        timer:stop()
+        timer:close()
+        return
+      end
+      todos = TodoList.load_todos()
+      time_starts = update_buffer(buf, todos)
+      M.apply_highlights(buf, todos, time_starts)
+      local new_height = math.min(#todos + 25, math.floor(vim.o.lines * 0.6))
+      vim.api.nvim_win_set_config(win, {
+        relative = win_config.relative,
+        width = win_config.width,
+        height = new_height,
+        row = math.floor((vim.o.lines - new_height) / 2),
+        col = win_config.col,
+        style = win_config.style,
+        border = win_config.border,
+      })
+    end)
+  )
+
+  -- Stop timer on window close
+  vim.api.nvim_create_autocmd("WinClosed", {
+    pattern = tostring(win),
+    callback = function()
+      if timer:is_active() then
+        timer:stop()
+        timer:close()
+      end
+    end,
+    once = true,
+  })
+
+  return { buf = buf, win = win, timer = timer }
 end
 
 --- Apply Solarized Osaka and orange highlights
@@ -100,6 +152,7 @@ function M.apply_highlights(buf, todos, time_starts)
   vim.api.nvim_set_hl(0, "TodoTimeRemaining", { fg = "#657b83" }) -- Solarized Osaka base01, lower contrast
 
   -- Apply highlights
+  vim.api.nvim_buf_clear_namespace(buf, -1, 0, -1)
   vim.api.nvim_buf_add_highlight(buf, -1, "TodoTitle", 0, 0, -1)
   for i, todo in ipairs(todos) do
     local line = i
