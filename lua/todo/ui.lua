@@ -209,7 +209,7 @@ function M.set_window_keymaps(buf, win)
   end, opts)
 
   -- Edit todo
-  vim.keymap.set("n", "e", function()
+  vim.keymap.set("n", "E", function()
     local line = vim.api.nvim_win_get_cursor(win)[1]
     if line > 1 then
       local todos = TodoList.load_todos()
