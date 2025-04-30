@@ -53,18 +53,30 @@ Install with `lazy.nvim`:
 Available options:
 
 ```lua
-require("todo").setup({
-  state_dir = vim.fn.stdpath("state"), -- Directory for todo storage
-  todo_file = nil, -- Defaults to state_dir/todo/todos.json
-  auto_delete_ms = 7 * 24 * 60 * 60 * 1000, -- Auto-delete todos after 7 days
-  colors = { -- Override default colors
-    orange = "#f97316",
-    yellow = "#b58900",
-    green = "#859900",
-    base0 = "#839496",
-    base03 = "#002b36",
-  },
-})
+config = function()
+  require("todo").setup({
+    -- Custom state directory for testing
+    state_dir = vim.fn.expand("~/.todo-nvim-test/state"),
+    -- Custom todo file for testing
+    todo_file = vim.fn.expand("~/.todo-nvim-test/todo/todos.json"),
+    -- Short auto-deletion time for testing (10 seconds)
+    auto_delete_ms = 10 * 1000,
+    -- Optional: Override colors for testing
+    colors = {
+      orange = "#f97316", -- TailwindCSS orange-500
+      yellow = "#b58900",
+      green = "#859900",
+      base0 = "#839496",
+      base03 = "#002b36",
+    },
+    -- Enable debug logging for development
+    debug = false,
+  })
+end,
+keys = {
+  { "<leader>t", "<cmd>TodoOpen<cr>", desc = "Open Todo List" },
+},
+
 ```
 
 ## Development
