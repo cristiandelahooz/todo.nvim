@@ -1,3 +1,10 @@
+## 0.1.1 (2025-04-29)
+
+### Refactor
+
+- **config**: add missing default values and make config values optional
+- **init**: remove unnecessary initialization of M.config
+
 ## 0.1.0 (2025-04-29)
 
 ### Feat
