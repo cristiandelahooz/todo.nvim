@@ -9,6 +9,7 @@ local config = require("todo.config")
 --- @field text string Todo description
 --- @field done boolean Completion status
 --- @field created_at number Timestamp (milliseconds since epoch) when created
+--- @field completed_at number? Timestamp (milliseconds since epoch) when completed
 
 --- @type string Path to the todo JSON file
 M.todo_file = nil
@@ -101,12 +102,14 @@ function M.load_todos()
       if
         not todo.done
         or not config.config.auto_delete_ms
-        or (now - todo.created_at) <= config.config.auto_delete_ms
+        or not todo.completed_at
+        or (now - todo.completed_at) <= config.config.auto_delete_ms
       then
         todos[#todos + 1] = {
           text = todo.text,
           done = todo.done,
           created_at = todo.created_at,
+          completed_at = todo.completed_at,
         }
       end
     end
@@ -130,11 +133,13 @@ function M.save_todos(todos)
       and type(todo.text) == "string"
       and type(todo.done) == "boolean"
       and type(todo.created_at) == "number"
+      and (not todo.completed_at or type(todo.completed_at) == "number")
     then
       valid_todos[i] = {
         text = todo.text,
         done = todo.done,
         created_at = todo.created_at,
+        completed_at = todo.completed_at,
       }
     end
   end
@@ -161,6 +166,7 @@ function M.add_todo(text)
     text = vim.trim(text),
     done = false,
     created_at = os.time() * 1000,
+    completed_at = nil,
   })
   M.save_todos(todos)
   return true
@@ -175,6 +181,10 @@ function M.toggle_todo(index)
   local todos = M.load_todos()
   if todos[index] then
     todos[index].done = not todos[index].done
+    todos[index].completed_at = todos[index].done and os.time() * 1000 or nil
+    if config.config.debug then
+      vim.notify("Toggled todo: " .. vim.inspect(todos[index]), vim.log.levels.INFO)
+    end
     M.save_todos(todos)
   end
 end

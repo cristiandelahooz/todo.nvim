@@ -39,7 +39,8 @@ local function update_buffer(buf, todos)
     local icon = todo.done and "✓" or "[ ]"
     local time_remaining = Config.config.auto_delete_ms
         and todo.done
-        and (Config.config.auto_delete_ms - (now - todo.created_at))
+        and todo.completed_at
+        and (Config.config.auto_delete_ms - (now - todo.completed_at))
       or nil
     local time_text = time_remaining and format_time_remaining(time_remaining) .. " remaining" or ""
     local main_text = string.format("%s %s", icon, todo.text)
