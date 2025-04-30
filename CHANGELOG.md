@@ -1,3 +1,14 @@
+## 0.1.0 (2025-04-29)
+
+### Feat
+
+- add real-time updates to visualize the timer
+- add remaining time to every list element
+
+### Fix
+
+- use completed at instead of created_at for auto-deletion
+
 ## 0.0.1 (2025-04-29)
 
 ### Fix
