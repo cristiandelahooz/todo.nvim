@@ -78,6 +78,7 @@ function M.load_todos()
     return {}
   end
 
+  ---@type boolean, { todos: Todo[] }
   local ok, data = pcall(vim.fn.json_decode, table.concat(content))
   if not ok or type(data) ~= "table" or type(data.todos) ~= "table" then
     local empty_content = vim.fn.json_encode({ todos = {} })
@@ -86,9 +87,10 @@ function M.load_todos()
   end
 
   -- Filter valid todos and apply auto-deletion
+  ---@type Todo[]
   local todos = {}
   local now = os.time() * 1000 -- Current time in milliseconds
-  for i, todo in ipairs(data.todos) do
+  for _, todo in ipairs(data.todos) do
     if
       type(todo) == "table"
       and type(todo.text) == "string"
@@ -126,6 +128,7 @@ function M.save_todos(todos)
   if config.config.debug then
     vim.notify("Saving todos: " .. vim.inspect(todos), vim.log.levels.INFO)
   end
+  ---@type Todo[]
   local valid_todos = {}
   for i, todo in ipairs(todos or {}) do
     if
