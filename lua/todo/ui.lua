@@ -175,17 +175,37 @@ function M.set_window_keymaps(buf, win)
 
   -- Add todo
   vim.keymap.set("n", "a", function()
-    vim.ui.input({ prompt = "New Todo: " }, function(input)
-      if input and input ~= "" then
-        local success = TodoList.add_todo(input)
-        if success then
-          vim.api.nvim_win_close(win, true)
-          M.open()
-        else
-          vim.notify("Failed to add todo: Invalid input", vim.log.levels.ERROR)
-        end
-      end
-    end)
+    -- Create a temporary buffer for input
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
+    vim.api.nvim_buf_set_option(buf, "filetype", "todo_input")
+
+    -- Open the buffer in a new window
+    local win = vim.api.nvim_open_win(buf, true, {
+      relative = "editor",
+      width = 40,
+      height = 5,
+      row = math.floor(vim.o.lines / 2 - 2),
+      col = math.floor(vim.o.columns / 2 - 20),
+      style = "minimal",
+      border = "rounded",
+    })
+
+    -- Set keymaps for confirming or canceling input
+    vim.api.nvim_buf_set_keymap(
+      buf,
+      "n",
+      "<CR>",
+      [[<Cmd>lua require('todo.ui').confirm_input(]] .. buf .. [[, ]] .. win .. [[)<CR>]],
+      { noremap = true, silent = true }
+    )
+    vim.api.nvim_buf_set_keymap(
+      buf,
+      "n",
+      "<Esc>",
+      [[<Cmd>lua vim.api.nvim_win_close(]] .. win .. [[, true)<CR>]],
+      { noremap = true, silent = true }
+    )
   end, opts)
 
   -- Toggle todo completion
@@ -247,6 +267,23 @@ function M.set_window_keymaps(buf, win)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, help)
     vim.api.nvim_buf_set_option(buf, "modifiable", false)
   end, opts)
+end
+
+function M.confirm_input(buf, win)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local input = table.concat(lines, "\n")
+
+  if input and input ~= "" then
+    local success = TodoList.add_todo(input)
+    if success then
+      vim.api.nvim_win_close(win, true)
+      M.open()
+    else
+      vim.notify("Failed to add todo: Invalid input", vim.log.levels.ERROR)
+    end
+  else
+    vim.notify("Input cannot be empty", vim.log.levels.WARN)
+  end
 end
 
 return M
